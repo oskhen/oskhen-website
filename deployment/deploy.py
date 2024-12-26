@@ -22,9 +22,11 @@ def getArgs():
 def createHTML(f):
 
     title = Path(f).stem
+    
+    metadata = { 'title': title }
+    metadata_string = "--metadata pagetitle={title}".format(**metadata).split(" ") 
 
-    metadata = ["--metadata", f"pagetitle={title}"]
-    pandoc_args = ["-s", "-M", "document-css=false"] + metadata
+    pandoc_args = ["-s", "-M", "document-css=false"] + metadata_string
 
     output = pypandoc.convert_file(f, "html", format='md', extra_args=pandoc_args) 
     HTML = re.sub(r"(<style>([\s\S]*)<\/style>)", "", output) #strips output from css
