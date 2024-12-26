@@ -2,19 +2,23 @@
 
 import argparse
 import pypandoc
+import yaml
 import re
+from getpass import getpass
 from pathlib import Path
+from paramiko import SSHClient, AutoAddPolicy, Ed25519Key, ed25519key, SFTPClient
 
 def getArgs():
 
     parser = argparse.ArgumentParser(
             prog = "oskhen-deploy",
             description = "Publishes input (md) file to oskhen-website",
-            epilog = "Input e.g \n deploy add file.md --project 'dailies' --section 'December 2024'")
+            epilog = "Input e.g \n deploy file.md --project 'dailies' --section 'December 2024'")
     
     parser.add_argument('filename')
     parser.add_argument('-p', '--project', required=True)
     parser.add_argument('-s', '--section')
+    parser.add_argument('-c', '--config', default='config.yml')
     
     args = parser.parse_args()
     return args
@@ -33,10 +37,29 @@ def createHTML(f):
 
     return HTML
 
+def parseConfig(f):
+
+    config = yaml.safe_load(open(f))
+    return config
+
+def deploy(config, f, args):
+
+    local = config['local']
+    server = config['server']
+
+    keyfile_password = getpass(f"Input password for encrypted keyfile {local['KEYFILE']}: ")
+
+    client = SSHClient()
+    client.set_missing_host_key_policy(AutoAddPolicy())
+    client.connect(server['HOST'], port=server['PORT'], username=server['USER'], pkey=Ed25519Key.from_private_key_file(local['KEYFILE'], keyfile_password)) 
+
 
 if __name__ == "__main__":
     
     args = getArgs()
-    print(createHTML(args.filename))
+    HTML = createHTML(args.filename)
+    config = parseConfig(args.config)
+    deploy(config, HTML, args)
+    
 
 
