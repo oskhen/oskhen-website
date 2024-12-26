@@ -48,10 +48,11 @@ def deploy(config, f, args):
     local = config['local']
     server = config['server']
 
+    filename = Path(args.filename).stem + ".html"
     section = str(args.section or '')
     keyfile_password = getpass(f"Enter passphrase for key '{local['KEYFILE']}': ")
     server_path = server['ROOT'] + f"/{args.project}/entries/{section}"
-    remote_path = f"{server_path}/{args.filename}"
+    remote_path = f"{server_path}/{filename}"
 
     client = SSHClient()
     client.set_missing_host_key_policy(AutoAddPolicy())
