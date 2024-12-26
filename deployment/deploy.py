@@ -5,6 +5,7 @@ import pypandoc
 import yaml
 import re
 from getpass import getpass
+from io import BytesIO
 from pathlib import Path
 from paramiko import SSHClient, AutoAddPolicy, Ed25519Key, ed25519key, SFTPClient
 
@@ -47,11 +48,17 @@ def deploy(config, f, args):
     local = config['local']
     server = config['server']
 
-    keyfile_password = getpass(f"Input password for encrypted keyfile {local['KEYFILE']}: ")
+    section = str(args.section or '')
+    keyfile_password = getpass(f"Enter passphrase for key '{local['KEYFILE']}': ")
+    server_path = server['ROOT'] + f"/{args.project}/entries/{section}"
+    remote_path = f"{server_path}/{args.filename}"
 
     client = SSHClient()
     client.set_missing_host_key_policy(AutoAddPolicy())
     client.connect(server['HOST'], port=server['PORT'], username=server['USER'], pkey=Ed25519Key.from_private_key_file(local['KEYFILE'], keyfile_password)) 
+
+    with client.open_sftp() as sftp:
+        sftp.putfo(BytesIO(f.encode()), remote_path)
 
 
 if __name__ == "__main__":
