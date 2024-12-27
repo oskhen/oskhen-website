@@ -4,10 +4,12 @@ import argparse
 import pypandoc
 import yaml
 import re
+import time
 from getpass import getpass
+from random import randint
 from io import BytesIO
 from pathlib import Path
-from paramiko import SSHClient, AutoAddPolicy, Ed25519Key, ed25519key, SFTPClient
+from paramiko import SSHClient, AutoAddPolicy, Ed25519Key
 
 def getArgs():
 
@@ -43,24 +45,52 @@ def parseConfig(f):
     config = yaml.safe_load(open(f))
     return config
 
-def deploy(config, f, args):
+def getClientSession(config):
 
     local = config['local']
     server = config['server']
 
-    filename = Path(args.filename).stem + ".html"
-    section = str(args.section or '')
     keyfile_password = getpass(f"Enter passphrase for key '{local['KEYFILE']}': ")
-    server_path = server['ROOT'] + f"/{args.project}/entries/{section}"
-    remote_path = f"{server_path}/{filename}"
 
     client = SSHClient()
     client.set_missing_host_key_policy(AutoAddPolicy())
     client.connect(server['HOST'], port=server['PORT'], username=server['USER'], pkey=Ed25519Key.from_private_key_file(local['KEYFILE'], keyfile_password)) 
 
-    with client.open_sftp() as sftp:
-        sftp.putfo(BytesIO(f.encode()), remote_path)
+    return client
 
+def getSQLCommand(root, args):
+
+    id = randint(1, 2**32)
+    date = int(time.time())
+    title = Path(args.filename).stem
+    section = str(args.section or '')
+    viewcount = 0
+
+    db = f"{root}/{args.project}/entries.db"
+
+    # SQL injection?
+    statement = f"INSERT INTO entries (id, date, title, section, viewcount) VALUES ({id}, {date}, \'{title}\', \'{section}\', {viewcount});"
+    execution = f"sqlite3 {db} \"{statement}\""
+
+    return execution
+
+
+def deploy(config, f, args):
+
+    root = config['server']['ROOT']
+    filename = Path(args.filename).stem + ".html"
+    section = str(args.section or '')
+
+    remote_path = root + f"/{args.project}/entries/{section}/{filename}"
+
+
+    with getClientSession(config) as client:
+
+        with client.open_sftp() as sftp:
+            sftp.putfo(BytesIO(f.encode()), remote_path)
+   
+        sql_command = getSQLCommand(root, args) 
+        client.exec_command(sql_command)
 
 if __name__ == "__main__":
     
