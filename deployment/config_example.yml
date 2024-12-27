@@ -1,0 +1,7 @@
+server:
+    HOST: 127.0.0.1
+    PORT: 22
+    USER: root
+    ROOT: /var/www/projects
+local:
+    KEYFILE: /home/root/.ssh/id_ed25519
