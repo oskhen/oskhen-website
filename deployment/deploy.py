@@ -10,6 +10,8 @@ from random import randint
 from io import BytesIO
 from pathlib import Path
 from paramiko import SSHClient, AutoAddPolicy, Ed25519Key
+from datetime import datetime
+import shlex
 
 def getArgs():
 
@@ -21,6 +23,7 @@ def getArgs():
     parser.add_argument('filename')
     parser.add_argument('-p', '--project', required=True)
     parser.add_argument('-s', '--section')
+    parser.add_argument('-d', '--date', help="eg. '240903 21:00' - all parts are optional")
     parser.add_argument('-c', '--config', default='config.yml')
     
     args = parser.parse_args()
@@ -31,7 +34,7 @@ def createHTML(f):
     title = Path(f).stem
     
     metadata = { 'title': title }
-    metadata_string = "--metadata pagetitle={title}".format(**metadata).split(" ") 
+    metadata_string = shlex.split("--metadata pagetitle='{title}'".format(**metadata))
 
     pandoc_args = ["-s", "-M", "document-css=false"] + metadata_string
 
@@ -58,10 +61,26 @@ def getClientSession(config):
 
     return client
 
+def parseTime(date):
+    if " " not in date:
+        date += " 12:00:00"
+    elif ":" not in date:
+        date += ":00:00"
+    elif date.count(":") != 2:
+        date += ":00"
+
+    obj = datetime.strptime(date, "%y%m%d %H:%M:%S")
+    return int(obj.timestamp())
+
+
 def getSQLCommand(root, args):
 
     id = randint(1, 2**32)
+
     date = int(time.time())
+    if args.date:
+        date = parseTime(args.date)
+
     title = Path(args.filename).stem
     section = str(args.section or '')
     viewcount = 0
