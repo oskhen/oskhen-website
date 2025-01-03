@@ -5,6 +5,7 @@ import pypandoc
 import yaml
 import re
 import time
+import os
 from getpass import getpass
 from random import randint
 from io import BytesIO
@@ -45,7 +46,9 @@ def createHTML(f):
 
 def parseConfig(f):
 
-    config = yaml.safe_load(open(f))
+    cwd = os.path.dirname(__file__)
+    config_path = f"{cwd}/{f}"
+    config = yaml.safe_load(open(config_path))
     return config
 
 def getClientSession(config):
