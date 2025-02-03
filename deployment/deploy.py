@@ -26,6 +26,7 @@ def getArgs():
     parser.add_argument('-s', '--section')
     parser.add_argument('-d', '--date', help="eg. '240903 21:00' - all parts are optional")
     parser.add_argument('-c', '--config', default='config.yml')
+    parser.add_argument('--hidden', action='store_true')
     
     args = parser.parse_args()
     return args
@@ -87,11 +88,12 @@ def getSQLCommand(root, args):
     title = Path(args.filename).stem
     section = str(args.section or '')
     viewcount = 0
+    hidden = str(args.hidden)
 
     db = f"{root}/{args.project}/entries.db"
 
     # SQL injection?
-    statement = f"INSERT INTO entries (id, date, title, section, viewcount) VALUES ({id}, {date}, \'{title}\', \'{section}\', {viewcount});"
+    statement = f"INSERT INTO entries (id, date, title, section, viewcount, hidden) VALUES ({id}, {date}, \'{title}\', \'{section}\', {viewcount}, {hidden});"
     execution = f"sqlite3 {db} \"{statement}\""
 
     return execution
