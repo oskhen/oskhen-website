@@ -105,12 +105,17 @@ def deploy(config, f, args):
     filename = Path(args.filename).stem + ".html"
     section = str(args.section or '')
 
-    remote_path = root + f"/{args.project}/entries/{section}/{filename}"
+    remote_dir = root + f"/{args.project}/entries/{section}"
+    remote_path = remote_dir + f"/{filename}"
 
 
     with getClientSession(config) as client:
 
         with client.open_sftp() as sftp:
+            try:
+                sftp.stat(remote_dir)
+            except FileNotFoundError:
+                sftp.mkdir(remote_dir)
             sftp.putfo(BytesIO(f.encode()), remote_path)
    
         sql_command = getSQLCommand(root, args) 
